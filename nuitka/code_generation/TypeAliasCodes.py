@@ -53,7 +53,7 @@ def generateTypeAliasCode(to_name, expression, emit, context):
 
 
 def generateTypeVarCode(to_name, expression, emit, context):
-    (compute_bound_name,) = generateChildExpressionsCode(
+    compute_bound_name, compute_constraints_name = generateChildExpressionsCode(
         expression=expression,
         emit=emit,
         context=context,
@@ -65,17 +65,26 @@ def generateTypeVarCode(to_name, expression, emit, context):
         assert expression.isExpressionTypeVariable()
 
         emit(
-            "%s = MAKE_TYPE_VAR(tstate, %s, %s);"
+            "%s = MAKE_TYPE_VAR(tstate, %s, %s, %s);"
             % (
                 value_name,
                 context.getConstantCode(constant=expression.name),
-                compute_bound_name or "NULL",
+                compute_bound_name if compute_bound_name is not None else "NULL",
+                (
+                    compute_constraints_name
+                    if compute_constraints_name is not None
+                    else "NULL"
+                ),
             )
         )
 
         getErrorExitCode(
             check_name=value_name,
-            release_name=compute_bound_name,
+            release_names=tuple(
+                child_name
+                for child_name in (compute_bound_name, compute_constraints_name)
+                if child_name is not None
+            ),
             emit=emit,
             context=context,
             needs_check=False,

@@ -736,18 +736,25 @@ ExpressionBuiltinMakeExceptionModuleNotFoundErrorBase = (
 )
 
 
-class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
+class _ChildrenHavingBoundOptionalConstraintsOptionalFinalNoRaiseNameMixin(
+    ExpressionBase
+):
     # Mixins are not allowed to specify slots, pylint: disable=assigning-non-slot
     __slots__ = ()
 
     # This is generated for use in
     #   ExpressionTypeVariable
 
-    def __init__(self, bound, name, source_ref):
+    def __init__(self, bound, constraints, name, source_ref):
         if bound is not None:
             bound.parent = self
 
         self.subnode_bound = bound
+
+        if constraints is not None:
+            constraints.parent = self
+
+        self.subnode_constraints = constraints
 
         self.name = name
 
@@ -761,12 +768,18 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
     def getVisitableNodes(self):
         """The visitable nodes, with tuple values flattened."""
 
+        result = []
         value = self.subnode_bound
-
         if value is None:
-            return ()
+            pass
         else:
-            return (value,)
+            result.append(value)
+        value = self.subnode_constraints
+        if value is None:
+            pass
+        else:
+            result.append(value)
+        return tuple(result)
 
     def getVisitableNodesNamed(self):
         """Named children dictionary.
@@ -774,7 +787,10 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
         For use in cloning nodes, debugging and XML output.
         """
 
-        return (("bound", self.subnode_bound),)
+        return (
+            ("bound", self.subnode_bound),
+            ("constraints", self.subnode_constraints),
+        )
 
     def replaceChild(self, old_node, new_node):
         value = self.subnode_bound
@@ -783,6 +799,15 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
                 new_node.parent = self
 
             self.subnode_bound = new_node
+
+            return
+
+        value = self.subnode_constraints
+        if old_node is value:
+            if new_node is not None:
+                new_node.parent = self
+
+            self.subnode_constraints = new_node
 
             return
 
@@ -800,6 +825,11 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
                 if self.subnode_bound is not None
                 else None
             ),
+            "constraints": (
+                self.subnode_constraints.makeClone()
+                if self.subnode_constraints is not None
+                else None
+            ),
         }
 
         values.update(self.getDetails())
@@ -812,6 +842,9 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
         if self.subnode_bound is not None:
             self.subnode_bound.finalize()
         del self.subnode_bound
+        if self.subnode_constraints is not None:
+            self.subnode_constraints.finalize()
+        del self.subnode_constraints
 
     def computeExpressionRaw(self, trace_collection):
         """Compute an expression.
@@ -821,15 +854,22 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
         be overloaded, e.g. conditional expressions.
         """
 
-        # First apply the sub-expression, as they it's evaluated before.
-        expression = self.subnode_bound
-
-        if expression is not None:
-            expression = trace_collection.onExpression(expression)
+        # First apply the sub-expressions, as they are evaluated before
+        # the actual operation.
+        for count, sub_expression in enumerate(self.getVisitableNodes()):
+            expression = trace_collection.onExpression(sub_expression)
 
             if expression.willRaiseAnyException():
+                sub_expressions = self.getVisitableNodes()
+
+                wrapped_expression = wrapExpressionWithSideEffects(
+                    side_effects=sub_expressions[:count],
+                    old_node=sub_expression,
+                    new_node=expression,
+                )
+
                 return (
-                    expression,
+                    wrapped_expression,
                     "new_raise",
                     lambda: "For '%s' the child expression '%s' will raise."
                     % (self.getChildNameNice(), expression.getChildNameNice()),
@@ -853,8 +893,12 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
         return False
 
     def mayRaiseException(self, exception_type):
-        return self.subnode_bound is not None and self.subnode_bound.mayRaiseException(
-            exception_type
+        return (
+            self.subnode_bound is not None
+            and self.subnode_bound.mayRaiseException(exception_type)
+        ) or (
+            self.subnode_constraints is not None
+            and self.subnode_constraints.mayRaiseException(exception_type)
         )
 
     def collectVariableAccesses(self, emit_variable):
@@ -864,10 +908,16 @@ class _ChildHavingBoundOptionalFinalNoRaiseNameMixin(ExpressionBase):
 
         if subnode_bound is not None:
             self.subnode_bound.collectVariableAccesses(emit_variable)
+        subnode_constraints = self.subnode_constraints
+
+        if subnode_constraints is not None:
+            self.subnode_constraints.collectVariableAccesses(emit_variable)
 
 
 # Assign the names that are easier to import with a stable name.
-ExpressionTypeVariableBase = _ChildHavingBoundOptionalFinalNoRaiseNameMixin
+ExpressionTypeVariableBase = (
+    _ChildrenHavingBoundOptionalConstraintsOptionalFinalNoRaiseNameMixin
+)
 
 
 class _ChildrenHavingCallableArgSentinelFinalMixin(ExpressionBase):

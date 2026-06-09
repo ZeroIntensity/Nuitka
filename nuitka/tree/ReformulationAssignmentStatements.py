@@ -1230,8 +1230,11 @@ def buildNamedExprNode(provider, node, source_ref):
 
 
 def buildTypeVarNode(provider, node, source_ref):
-    if node.bound is not None:
-        evaluate_bound = _makeDeferredEvaluationFunction(
+    if node.bound is None:
+        evaluate_bound = None
+        evaluate_constraints = None
+    else:
+        deferred_evaluation = _makeDeferredEvaluationFunction(
             provider=provider,
             function_name=node.name,
             create_expression=lambda inner_provider: buildNode(
@@ -1239,11 +1242,19 @@ def buildTypeVarNode(provider, node, source_ref):
             ),
             source_ref=source_ref,
         )
-    else:
-        evaluate_bound = None
+
+        if getKind(node.bound) == "Tuple":
+            evaluate_bound = None
+            evaluate_constraints = deferred_evaluation
+        else:
+            evaluate_bound = deferred_evaluation
+            evaluate_constraints = None
 
     return ExpressionTypeVariable(
-        name=node.name, bound=evaluate_bound, source_ref=source_ref
+        name=node.name,
+        bound=evaluate_bound,
+        constraints=evaluate_constraints,
+        source_ref=source_ref,
     )
 
 

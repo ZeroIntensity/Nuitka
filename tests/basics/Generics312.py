@@ -123,25 +123,95 @@ print(asyncGenTypeParams, asyncGenTypeParams.__type_params__)
 
 def sideEffect():
     print("Side effect")
-    return 42
+    return int
 
 
-def usingBound[T: str, UnionT: str | int, Deferred: sideEffect()]():
-    print("T.__bound__", T.__bound__)
-    print("UnionT.__bound__", UnionT.__bound__)
-    print("Deferred.__bound__", Deferred.__bound__)
+class CustomBound:
+    pass
+
+
+def BoundUsingFunction[
+    BoundT: str,
+    DeferredT: sideEffect(),
+    ConstrainedT: (str, bytes),
+    CustomT: CustomBound,
+    GenericAliasT: list[int],
+    UnboundT,
+]():
+    print("Function TypeVar bound", BoundT.__bound__ is str)
+    print("Function TypeVar deferred bound", DeferredT.__bound__ is int)
+    print("Function TypeVar deferred cached", DeferredT.__bound__ is int)
+    print("Function TypeVar constrained bound", ConstrainedT.__bound__ is None)
+    print(
+        "Function TypeVar constraints",
+        ConstrainedT.__constraints__ == (str, bytes),
+    )
+    print("Function TypeVar custom bound", CustomT.__bound__ is CustomBound)
+    print("Function TypeVar generic alias bound", GenericAliasT.__bound__ == list[int])
+    print("Function TypeVar unbound", UnboundT.__bound__ is None)
 
 
 print("Function with bound")
-usingBound()
+BoundUsingFunction()
 
 print("Class with bound")
 
 
-class UsingBound[T: str, UnionT: str | int, Deferred: sideEffect()]:
-    print("T.__bound__", T.__bound__)
-    print("UnionT.__bound__", UnionT.__bound__)
-    print("Deferred.__bound__", Deferred.__bound__)
+class BoundUsingClass[
+    BoundT: str,
+    DeferredT: sideEffect(),
+    ConstrainedT: (str, bytes),
+    CustomT: CustomBound,
+    GenericAliasT: list[int],
+    UnboundT,
+]:
+    print("Class TypeVar bound", BoundT.__bound__ is str)
+    print("Class TypeVar deferred bound", DeferredT.__bound__ is int)
+    print("Class TypeVar deferred cached", DeferredT.__bound__ is int)
+    print("Class TypeVar constrained bound", ConstrainedT.__bound__ is None)
+    print(
+        "Class TypeVar constraints",
+        ConstrainedT.__constraints__ == (str, bytes),
+    )
+    print("Class TypeVar custom bound", CustomT.__bound__ is CustomBound)
+    print("Class TypeVar generic alias bound", GenericAliasT.__bound__ == list[int])
+    print("Class TypeVar unbound", UnboundT.__bound__ is None)
+
+
+type AliasBound[AliasT: str] = list[AliasT]
+type AliasDeferred[AliasT: sideEffect()] = AliasT
+type AliasConstrained[AliasT: (str, bytes)] = AliasT
+type AliasCustom[AliasT: CustomBound] = AliasT
+type AliasGeneric[AliasT: list[int]] = AliasT
+type AliasUnbound[AliasT] = AliasT
+
+print("After type alias bound definitions")
+print("Type alias TypeVar bound", AliasBound.__type_params__[0].__bound__ is str)
+print(
+    "Type alias TypeVar deferred bound",
+    AliasDeferred.__type_params__[0].__bound__ is int,
+)
+print(
+    "Type alias TypeVar deferred cached",
+    AliasDeferred.__type_params__[0].__bound__ is int,
+)
+print(
+    "Type alias TypeVar constrained bound",
+    AliasConstrained.__type_params__[0].__bound__ is None,
+)
+print(
+    "Type alias TypeVar constraints",
+    AliasConstrained.__type_params__[0].__constraints__ == (str, bytes),
+)
+print(
+    "Type alias TypeVar custom bound",
+    AliasCustom.__type_params__[0].__bound__ is CustomBound,
+)
+print(
+    "Type alias TypeVar generic alias bound",
+    AliasGeneric.__type_params__[0].__bound__ == list[int],
+)
+print("Type alias TypeVar unbound", AliasUnbound.__type_params__[0].__bound__ is None)
 
 
 #     Python tests originally created or extracted from other peoples work. The

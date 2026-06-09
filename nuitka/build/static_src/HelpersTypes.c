@@ -1044,12 +1044,13 @@ static paramspecobject *_Nuitka_paramspec_alloc(PyThreadState *tstate, PyObject 
     return ps;
 }
 
-PyObject *MAKE_TYPE_VAR(PyThreadState *tstate, PyObject *name, PyObject *bound) {
+PyObject *MAKE_TYPE_VAR(PyThreadState *tstate, PyObject *name, PyObject *evaluate_bound,
+                        PyObject *evaluate_constraints) {
     // TODO: For Python 3.13 this would work.
     // return _PyIntrinsics_UnaryFunctions[INTRINSIC_TYPEVAR].func(tstate, name);
 
-    return (PyObject *)_Nuitka_typevar_alloc(tstate, name, NULL, /*evaluate_bound=*/bound, NULL, NULL, false, false,
-                                             true, NULL);
+    return (PyObject *)_Nuitka_typevar_alloc(tstate, name, NULL, evaluate_bound, NULL, evaluate_constraints, false,
+                                             false, true, NULL);
 }
 
 PyObject *MAKE_TYPE_VAR_TUPLE(PyThreadState *tstate, PyObject *name) {
